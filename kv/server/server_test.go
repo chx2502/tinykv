@@ -1,6 +1,7 @@
 package server
 
 import (
+	"log"
 	"os"
 	"testing"
 
@@ -42,12 +43,14 @@ func Iter(s *standalone_storage.StandAloneStorage, cf string) (engine_util.DBIte
 
 func cleanUpTestData(conf *config.Config) error {
 	if conf != nil {
+		log.Println("cleanUpTestData Done")
 		return os.RemoveAll(conf.DBPath)
 	}
 	return nil
 }
 
 func TestRawGet1(t *testing.T) {
+	log.SetPrefix("[TestRawGet1]")
 	conf := config.NewTestConfig()
 	s := standalone_storage.NewStandAloneStorage(conf)
 	s.Start()
@@ -68,6 +71,7 @@ func TestRawGet1(t *testing.T) {
 }
 
 func TestRawGetNotFound1(t *testing.T) {
+	log.SetPrefix("[TestRawGetNotFound1]")
 	conf := config.NewTestConfig()
 	s := standalone_storage.NewStandAloneStorage(conf)
 	s.Start()
