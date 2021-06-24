@@ -58,14 +58,9 @@ type RaftLog struct {
 // to the state that it just commits and applies the latest snapshot.
 func newLog(storage Storage) *RaftLog {
 	// Your Code Here (2A).
-	lo, err := storage.FirstIndex()
-	if err != nil {
-		panic(err)
-	}
-	hi, err := storage.LastIndex()
-	if err != nil {
-		panic(err)
-	}
+	lo, _ := storage.FirstIndex()
+	hi, _ := storage.LastIndex()
+
 	entries, err := storage.Entries(lo, hi+1)
 	if err != nil {
 		panic(err)
@@ -84,16 +79,45 @@ func (l *RaftLog) maybeCompact() {
 	// Your Code Here (2C).
 }
 
+func (l *RaftLog)sliceIndex(index uint64) uint64 {
+	offset, _ := l.storage.FirstIndex()
+	res := index - offset
+	if res < 0 {
+		panic("indexOffset(): index out of range\n")
+	}
+	return res
+}
+
+func (l *RaftLog)entryIndex(i uint64) uint64 {
+	offset, _ := l.storage.FirstIndex()
+	return uint64(i) + offset
+}
+
+// TODO:
+func (l *RaftLog) entriesBetween(lo, hi uint64) []pb.Entry {
+	return nil
+}
+
 // unstableEntries return all the unstable entries
 func (l *RaftLog) unstableEntries() []pb.Entry {
 	// Your Code Here (2A).
+	if len(l.entries) > 0 {
+		firstIndex, _ := l.storage.FirstIndex()
+		return l.entries[l.stabled-firstIndex+1 : len(l.entries)]
+	}
 	return nil
 }
 
 // nextEnts returns all the committed but not applied entries
 func (l *RaftLog) nextEnts() (ents []pb.Entry) {
 	// Your Code Here (2A).
-
+	if len(l.entries) > 0 {
+		firstIndex, _ := l.storage.FirstIndex()
+		begin := l.applied - firstIndex + 1
+		end := l.committed - firstIndex + 1
+		ents = l.entries[begin : end]
+		return
+	}
 	return nil
 }
 
@@ -101,20 +125,18 @@ func (l *RaftLog) nextEnts() (ents []pb.Entry) {
 func (l *RaftLog) LastIndex() uint64 {
 	// Your Code Here (2A).
 	if len(l.entries) > 0 {
-		return l.entries[0].Index + uint64(len(l.entries)) - 1
+		return l.entries[len(l.entries)-1].Index
 	}
-	index, err := l.storage.LastIndex()
-	if err != nil {
-		panic(err)
-	}
+	index, _ := l.storage.LastIndex()
 	return index
 }
 
 // Term return the term of the entry in the given index
 func (l *RaftLog) Term(i uint64) (uint64, error) {
 	// Your Code Here (2A).
-	if len(l.entries) > 0 {
-		return l.entries[i - l.entries[0].Index].Term, nil
+	firstIndex, _ := l.storage.FirstIndex()
+	if len(l.entries) > 0 && i >= firstIndex {
+		return l.entries[i - firstIndex].Term, nil
 	}
 	return l.storage.Term(i)
 }
