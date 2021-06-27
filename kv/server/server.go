@@ -80,7 +80,7 @@ func (server *Server) RawPut(_ context.Context, req *kvrpcpb.RawPutRequest) (*kv
 
 func (server *Server) RawDelete(_ context.Context, req *kvrpcpb.RawDeleteRequest) (*kvrpcpb.RawDeleteResponse, error) {
 	batch := []storage.Modify{
-		storage.Modify{
+		{
 			Data: storage.Delete{
 				Cf: req.Cf,
 				Key: req.Key,
