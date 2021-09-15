@@ -219,7 +219,10 @@ func (r *Raft) tickElection() {
 	if r.electionElapsed >= r.randomElectionTimeout {
 		r.electionElapsed = 0
 		// send message `MessageType_MsgHup` to self
-		r.Step(pb.Message{MsgType: pb.MessageType_MsgHup, From: r.id})
+		err := r.Step(pb.Message{MsgType: pb.MessageType_MsgHup, From: r.id})
+		if err != nil {
+			log.Printf(r.nodeInfo() + err.Error())
+		}
 	}
 }
 
@@ -229,7 +232,10 @@ func (r *Raft) tickHeartBeat() {
 	if r.heartbeatElapsed >= r.heartbeatElapsed {
 		r.heartbeatElapsed = 0
 		log.Printf(r.nodeInfo() + "heartbeat timeout\n")
-		r.Step(pb.Message{MsgType: pb.MessageType_MsgBeat, From: r.id})
+		err := r.Step(pb.Message{MsgType: pb.MessageType_MsgBeat, From: r.id})
+		if err != nil {
+			log.Printf(r.nodeInfo() + err.Error())
+		}
 	}
 }
 
@@ -292,11 +298,11 @@ func (r *Raft) Step(m pb.Message) error {
 
 	switch r.State {
 	case StateFollower:
-		r.followerStep(m)
+		return r.followerStep(m)
 	case StateCandidate:
-		r.candidateStep(m)
+		return r.candidateStep(m)
 	case StateLeader:
-		r.leaderStep(m)
+		return r.leaderStep(m)
 	}
 	return nil
 }
@@ -393,7 +399,7 @@ func (r *Raft) campaign() {
 	r.randomElectionTimeout = r.electionTimeout + rand.Intn(r.electionTimeout)
 
 	if len(r.Prs) == 1 {
-		// if there is only one server, current server win
+		// 集群节点数=1 时，直接当选
 		r.becomeLeader()
 		return
 	}
@@ -725,6 +731,16 @@ func (r *Raft) sendHeartbeat(to uint64) {
 		Term: r.Term,
 	}
 	r.sendMessage(m)
+}
+
+func (r *Raft) softState() *SoftState { return &SoftState{Lead: r.Lead, RaftState: r.State} }
+
+func (r *Raft) hardState() pb.HardState {
+	return pb.HardState{
+		Term: r.Term,
+		Vote: r.Vote,
+		Commit: r.RaftLog.committed,
+	}
 }
 
 // addNode add a new node to raft group
